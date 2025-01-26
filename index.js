@@ -1,7 +1,7 @@
-const express = require('express');
-const { CohereClient } = require('cohere-ai'); // Use CommonJS syntax for Cohere
-const cors = require('cors'); // Import cors
-require('dotenv').config();
+const express = require("express");
+const { CohereClient } = require("cohere-ai"); // Use CommonJS syntax for Cohere
+const cors = require("cors"); // Import cors
+require("dotenv").config();
 
 const app = express();
 const port = process.env.PORT || 5000; // Use environment variable for flexibility
@@ -20,13 +20,14 @@ app.use(
 );
 
 // API route for generating a story
-app.post('/generate-story', async (req, res) => {
+app.post("/generate-story", async (req, res) => {
   const { characterNames, genre, storyDescription } = req.body;
 
   // Input validation
   if (!Array.isArray(characterNames) || characterNames.length === 0 || !genre) {
     return res.status(400).json({
-      error: 'Character names (array with descriptions) and genre are required.',
+      error:
+        "Character names (array with descriptions) and genre are required.",
     });
   }
 
@@ -45,7 +46,7 @@ app.post('/generate-story', async (req, res) => {
   // Build character descriptions dynamically
   const characterDetails = characterNames
     .map((char) => `${char.characterName}: ${char.description}`)
-    .join('\n');
+    .join("\n");
 
   // Construct the prompt
   const prompt = `
@@ -63,29 +64,31 @@ Ensure the story includes at least 2000 words and develops the characters meanin
   try {
     // Generate the story using Cohere API
     const response = await cohere.generate({
-      model: 'command', // Ensure you're using a valid model (e.g., 'command' or 'xlarge')
+      model: "command", // Ensure you're using a valid model (e.g., 'command' or 'xlarge')
       prompt: prompt,
       max_tokens: 2000, // Limit token generation
       temperature: 0.7, // Adjust temperature for creativity
     });
 
     // Check for a valid response
-    if (response?.generations?.length > 0) {
+    if (response && response.generations && response.generations.length > 0) {
       const story = response.generations[0].text;
-      return res.status(200).json({ story });
+      console.log(story); // Check if this logs the story correctly
+      res.status(200).json({ story }); // Ensure this sends the response
     } else {
-      console.error('Error: Story generations not found in the response.');
-      return res.status(400).json({ error: 'Failed to generate story content.' });
+      console.log('Error: Story generations not found in the response.');
+      return res.status(400).json({ error: 'Failed to generate story content' });
     }
+    
   } catch (error) {
-    console.error('Error generating story:', error);
-    return res.status(500).json({ error: 'Internal server error.' });
+    console.error("Error generating story:", error);
+    return res.status(500).json({ error: "Internal server error." });
   }
 });
 
 // Default route to handle invalid endpoints
 app.use((req, res) => {
-  res.status(404).json({ error: 'Route not found.' });
+  res.status(404).json({ error: "Route not found." });
 });
 
 // Start the Express server
