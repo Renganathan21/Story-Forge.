@@ -1,23 +1,22 @@
 const express = require("express");
-const { CohereClient } = require("cohere-ai"); // Use CommonJS syntax for Cohere
-const cors = require("cors"); // Import cors
+const cors = require("cors");
 require("dotenv").config();
+const { GoogleGenerativeAI } = require("@google/generative-ai");
 
 const app = express();
-const port = process.env.PORT || 5000; // Use environment variable for flexibility
+const port = process.env.PORT || 5000;
 
-// Initialize Cohere client with API key
-const cohere = new CohereClient({
-  token: process.env.COHERE_API_KEY, // Ensure the API key is stored in a `.env` file
-});
+// Initialize Gemini client with API key
+const genAI = new GoogleGenerativeAI(process.env.COHERE_API_KEY);
 
 // Middleware to parse JSON and enable CORS
 app.use(express.json());
 app.use(
   cors({
-    origin: "http://localhost:5173", // Allow localhost for development
+    origin: true, // Allow all origins
   })
 );
+
 
 // API route for generating a story
 app.post("/generate-story", async (req, res) => {
@@ -26,8 +25,7 @@ app.post("/generate-story", async (req, res) => {
   // Input validation
   if (!Array.isArray(characterNames) || characterNames.length === 0 || !genre) {
     return res.status(400).json({
-      error:
-        "Character names (array with descriptions) and genre are required.",
+      error: "Character names (array with descriptions) and genre are required.",
     });
   }
 
@@ -62,24 +60,17 @@ Ensure the story includes at least 2000 words and develops the characters meanin
   `;
 
   try {
-    // Generate the story using Cohere API
-    const response = await cohere.generate({
-      model: "command", // Ensure you're using a valid model (e.g., 'command' or 'xlarge')
-      prompt: prompt,
-      max_tokens: 2000, // Limit token generation
-      temperature: 0.7, // Adjust temperature for creativity
-    });
+    const model = genAI.getGenerativeModel({ model: "gemini-pro" });
+    const result = await model.generateContent(prompt);
+    const story = result.response.text();
 
-    // Check for a valid response
-    if (response && response.generations && response.generations.length > 0) {
-      const story = response.generations[0].text;
-      console.log(story); // Check if this logs the story correctly
-      res.status(200).json({ story }); // Ensure this sends the response
+    if (story) {
+      console.log(story);
+      res.status(200).json({ story });
     } else {
-      console.log('Error: Story generations not found in the response.');
-      return res.status(400).json({ error: 'Failed to generate story content' });
+      console.log("Error: Story generation failed.");
+      return res.status(400).json({ error: "Failed to generate story content" });
     }
-    
   } catch (error) {
     console.error("Error generating story:", error);
     return res.status(500).json({ error: "Internal server error." });
